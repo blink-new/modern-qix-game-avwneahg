@@ -1,54 +1,62 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Modern Qix Game
 
-Currently, two official plugins are available:
+A modern, fully functional browser-based version of the classic arcade game Qix, built with React and Vite.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![Modern Qix Game](https://i.imgur.com/JYqXXXX.png)
 
-## Expanding the ESLint configuration
+## About the Game
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Qix is a classic arcade game released by Taito in 1981. The objective is to claim territory on the game board while avoiding enemies. This modern version recreates the gameplay with updated visuals and smooth animations.
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## How to Play
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1. **Objective**: Claim at least 75% of the screen area to advance to the next level.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+2. **Controls**:
+   - Arrow keys or WASD to move
+   - Hold Shift for faster movement
+   - Mobile: On-screen buttons for touch controls
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+3. **Gameplay Mechanics**:
+   - You start on the border of the game area
+   - Draw lines by moving away from the border into unclaimed territory
+   - Complete a shape by returning to a border or already claimed area
+   - The smaller area between your line and the border will be filled
+   - Avoid the Qix (colorful spinning shape) and Sparx (yellow dots) while drawing
+
+4. **Enemies**:
+   - **Qix**: The main enemy that moves randomly in unclaimed territory
+   - **Sparx**: Secondary enemies that patrol the borders and your drawn lines
+
+5. **Scoring**:
+   - Points are awarded based on the percentage of the screen claimed
+   - Bonus points for completing a level
+   - Higher levels introduce more enemies and faster movement
+
+## Features
+
+- Responsive design that works on both desktop and mobile
+- Modern neon-style visuals with gradients and glow effects
+- Animated enemies with dynamic movement patterns
+- Level progression with increasing difficulty
+- Lives system and score tracking
+
+## Development
+
+This game is built with:
+- React for UI components
+- Canvas API for game rendering
+- Framer Motion for animations
+- Tailwind CSS for styling
+
+## Running Locally
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
+4. Open your browser to the local server address (usually http://localhost:3000)
+
+## Credits
+
+This modern implementation is inspired by the original Qix arcade game by Taito Corporation (1981).
