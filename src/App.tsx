@@ -1,24 +1,50 @@
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from './components/ui/button'
 import { GameBoard } from './components/GameBoard'
 import { GameControls } from './components/GameControls'
 import { GameOver } from './components/GameOver'
 import { GameStart } from './components/GameStart'
-import { useGameState } from './hooks/useGameState'
+
+type GameState = 'start' | 'playing' | 'gameover'
 
 function App() {
-  const {
-    gameState,
-    score,
-    level,
-    lives,
-    percentageClaimed,
-    startGame,
-    resetGame,
-    gameOver,
-    setGameOver
-  } = useGameState()
+  const [gameState, setGameState] = useState<GameState>('start')
+  const [score, setScore] = useState(0)
+  const [level, setLevel] = useState(1)
+  const [lives, setLives] = useState(3)
+  const [percentageClaimed, setPercentageClaimed] = useState(0)
+  
+  // Handle level progression
+  useEffect(() => {
+    if (percentageClaimed >= 75 && gameState === 'playing') {
+      // Level complete
+      setLevel(prev => prev + 1)
+      setScore(prev => prev + 1000) // Bonus for completing level
+      setPercentageClaimed(0)
+    }
+  }, [percentageClaimed, gameState])
+  
+  // Handle game over
+  const handleGameOver = () => {
+    if (lives > 1) {
+      setLives(prev => prev - 1)
+    } else {
+      setGameState('gameover')
+    }
+  }
+  
+  const startGame = () => {
+    setGameState('playing')
+    setScore(0)
+    setLevel(1)
+    setLives(3)
+    setPercentageClaimed(0)
+  }
+  
+  const resetGame = () => {
+    setGameState('start')
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-950 to-purple-900 flex flex-col items-center justify-center p-4">
@@ -56,7 +82,7 @@ function App() {
           <div className="relative">
             <GameBoard 
               level={level} 
-              onGameOver={() => setGameOver(true)}
+              onGameOver={handleGameOver}
               percentageClaimed={percentageClaimed}
             />
             <GameControls />

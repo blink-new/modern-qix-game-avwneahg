@@ -13,27 +13,25 @@ export function useGameState() {
 
   // Handle level progression
   useEffect(() => {
-    if (percentageClaimed >= 75) {
+    if (percentageClaimed >= 75 && gameState === 'playing') {
       // Level complete
       setLevel(prev => prev + 1)
       setScore(prev => prev + 1000) // Bonus for completing level
       setPercentageClaimed(0)
     }
-  }, [percentageClaimed])
+  }, [percentageClaimed, gameState])
 
   // Handle game over
   useEffect(() => {
     if (gameOver) {
-      setGameState('gameover')
+      if (lives > 1) {
+        setLives(prev => prev - 1)
+        setGameOver(false)
+      } else {
+        setGameState('gameover')
+      }
     }
-  }, [gameOver])
-
-  // Handle lives
-  useEffect(() => {
-    if (lives <= 0) {
-      setGameOver(true)
-    }
-  }, [lives])
+  }, [gameOver, lives])
 
   const startGame = () => {
     setGameState('playing')
