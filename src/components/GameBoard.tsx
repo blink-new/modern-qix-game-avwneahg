@@ -1,6 +1,5 @@
 
 import { useEffect, useRef, useState } from 'react'
-import { useGameLoop } from '../hooks/useGameLoop'
 import { useKeyboardControls } from '../hooks/useKeyboardControls'
 
 interface GameBoardProps {
@@ -11,20 +10,28 @@ interface GameBoardProps {
 
 export function GameBoard({ level, onGameOver }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [boardSize] = useState({ width: 600, height: 600 })
+  const [boardSize] = useState({ width: 600, height: 400 })
   const [claimedArea, setClaimedArea] = useState<boolean[][]>([])
   const [currentPath, setCurrentPath] = useState<{ x: number, y: number }[]>([])
-  const [playerPosition, setPlayerPosition] = useState({ x: 300, y: 600 })
+  const [playerPosition, setPlayerPosition] = useState({ x: 300, y: 399 })
   const [playerDrawing, setPlayerDrawing] = useState(false)
-  const [qixPosition, setQixPosition] = useState({ x: 300, y: 300 })
+  const [qixPosition, setQixPosition] = useState({ x: 300, y: 200 })
   const [qixVelocity, setQixVelocity] = useState({ x: 2, y: 2 })
   const [sparxPositions, setSparxPositions] = useState<{ x: number, y: number, direction: number }[]>([])
   const [percentageClaimed, setPercentageClaimed] = useState(0)
+  const [isInitialized, setIsInitialized] = useState(false)
   
   // Initialize the game board
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    
+    // Clear canvas with black background
+    ctx.fillStyle = 'black'
+    ctx.fillRect(0, 0, boardSize.width, boardSize.height)
     
     // Initialize claimed area (border is claimed)
     const initialClaimedArea = Array(boardSize.height).fill(null).map(() => 
@@ -60,210 +67,230 @@ export function GameBoard({ level, onGameOver }: GameBoardProps) {
     }
     
     setSparxPositions(newSparx)
+    setIsInitialized(true)
   }, [level, boardSize])
   
   // Keyboard controls
   const { keys } = useKeyboardControls()
   
   // Game loop
-  useGameLoop(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+  useEffect(() => {
+    if (!isInitialized) return
     
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    let animationId: number
+    let lastTime = 0
     
-    // Clear canvas
-    ctx.fillStyle = 'black'
-    ctx.fillRect(0, 0, boardSize.width, boardSize.height)
-    
-    // Draw grid
-    drawGrid(ctx, boardSize.width, boardSize.height)
-    
-    // Draw claimed area
-    ctx.fillStyle = 'rgba(64, 0, 128, 0.5)'
-    for (let y = 0; y < boardSize.height; y++) {
-      for (let x = 0; x < boardSize.width; x++) {
-        if (claimedArea[y] && claimedArea[y][x]) {
-          ctx.fillRect(x, y, 1, 1)
+    const gameLoop = (time: number) => {
+      const deltaTime = time - lastTime
+      lastTime = time
+      
+      const canvas = canvasRef.current
+      if (!canvas) return
+      
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      
+      // Clear canvas
+      ctx.fillStyle = 'black'
+      ctx.fillRect(0, 0, boardSize.width, boardSize.height)
+      
+      // Draw grid
+      drawGrid(ctx, boardSize.width, boardSize.height)
+      
+      // Draw claimed area
+      ctx.fillStyle = 'rgba(64, 0, 128, 0.5)'
+      for (let y = 0; y < boardSize.height; y++) {
+        for (let x = 0; x < boardSize.width; x++) {
+          if (claimedArea[y] && claimedArea[y][x]) {
+            ctx.fillRect(x, y, 1, 1)
+          }
         }
       }
-    }
-    
-    // Draw current path
-    if (currentPath.length > 0) {
-      ctx.strokeStyle = '#00ffff'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.moveTo(currentPath[0].x, currentPath[0].y)
       
-      for (let i = 1; i < currentPath.length; i++) {
-        ctx.lineTo(currentPath[i].x, currentPath[i].y)
+      // Draw current path
+      if (currentPath.length > 0) {
+        ctx.strokeStyle = '#00ffff'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(currentPath[0].x, currentPath[0].y)
+        
+        for (let i = 1; i < currentPath.length; i++) {
+          ctx.lineTo(currentPath[i].x, currentPath[i].y)
+        }
+        
+        ctx.stroke()
       }
       
-      ctx.stroke()
-    }
-    
-    // Move player based on keyboard input
-    if (!playerDrawing) {
-      const speed = keys.shift ? 2 : 1
-      let newX = playerPosition.x
-      let newY = playerPosition.y
-      
-      if (keys.up && canMove(playerPosition.x, playerPosition.y - speed)) {
-        newY -= speed
-      } else if (keys.down && canMove(playerPosition.x, playerPosition.y + speed)) {
-        newY += speed
-      } else if (keys.left && canMove(playerPosition.x - speed, playerPosition.y)) {
-        newX -= speed
-      } else if (keys.right && canMove(playerPosition.x + speed, playerPosition.y)) {
-        newX += speed
-      }
-      
-      // Start drawing if moved away from border
-      if ((newX !== playerPosition.x || newY !== playerPosition.y) && 
-          !isOnBorder(newX, newY) && isOnBorder(playerPosition.x, playerPosition.y)) {
-        setPlayerDrawing(true)
-        setCurrentPath([{ x: playerPosition.x, y: playerPosition.y }])
-      }
-      
-      setPlayerPosition({ x: newX, y: newY })
-    } else {
-      // Player is drawing
-      const speed = keys.shift ? 2 : 1
-      let newX = playerPosition.x
-      let newY = playerPosition.y
-      
-      if (keys.up) {
-        newY -= speed
-      } else if (keys.down) {
-        newY += speed
-      } else if (keys.left) {
-        newX -= speed
-      } else if (keys.right) {
-        newX += speed
-      }
-      
-      // Check if new position is valid for drawing
-      if (newX >= 0 && newX < boardSize.width && newY >= 0 && newY < boardSize.height) {
-        // Check if hit border or claimed area
-        if (isOnBorder(newX, newY) || 
-            (claimedArea[newY] && claimedArea[newY][newX])) {
-          // Complete the path
-          setCurrentPath([...currentPath, { x: newX, y: newY }])
-          
-          // Fill the enclosed area
-          const newClaimedArea = [...claimedArea]
-          const filledArea = calculateArea(currentPath, newClaimedArea, boardSize)
-          setClaimedArea(filledArea.newArea)
-          
-          // Calculate percentage claimed
-          const totalClaimed = filledArea.newArea.flat().filter(Boolean).length
-          const totalArea = boardSize.width * boardSize.height
-          const percentage = Math.floor((totalClaimed / totalArea) * 100)
-          setPercentageClaimed(percentage)
-          
-          // Update game state
-          setPlayerDrawing(false)
-          setCurrentPath([])
-        } else {
-          // Continue drawing
-          if (newX !== playerPosition.x || newY !== playerPosition.y) {
-            setCurrentPath([...currentPath, { x: newX, y: newY }])
-          }
+      // Move player based on keyboard input
+      if (!playerDrawing) {
+        const speed = keys.shift ? 2 : 1
+        let newX = playerPosition.x
+        let newY = playerPosition.y
+        
+        if (keys.up && canMove(playerPosition.x, playerPosition.y - speed)) {
+          newY -= speed
+        } else if (keys.down && canMove(playerPosition.x, playerPosition.y + speed)) {
+          newY += speed
+        } else if (keys.left && canMove(playerPosition.x - speed, playerPosition.y)) {
+          newX -= speed
+        } else if (keys.right && canMove(playerPosition.x + speed, playerPosition.y)) {
+          newX += speed
+        }
+        
+        // Start drawing if moved away from border
+        if ((newX !== playerPosition.x || newY !== playerPosition.y) && 
+            !isOnBorder(newX, newY) && isOnBorder(playerPosition.x, playerPosition.y)) {
+          setPlayerDrawing(true)
+          setCurrentPath([{ x: playerPosition.x, y: playerPosition.y }])
         }
         
         setPlayerPosition({ x: newX, y: newY })
-      }
-    }
-    
-    // Move Qix
-    let newQixX = qixPosition.x + qixVelocity.x
-    let newQixY = qixPosition.y + qixVelocity.y
-    
-    // Bounce off walls and claimed areas
-    if (newQixX <= 0 || newQixX >= boardSize.width - 20 || 
-        (claimedArea[Math.floor(newQixY)] && claimedArea[Math.floor(newQixY)][Math.floor(newQixX)])) {
-      setQixVelocity({ ...qixVelocity, x: -qixVelocity.x })
-      newQixX = qixPosition.x - qixVelocity.x
-    }
-    
-    if (newQixY <= 0 || newQixY >= boardSize.height - 20 || 
-        (claimedArea[Math.floor(newQixY)] && claimedArea[Math.floor(newQixY)][Math.floor(newQixX)])) {
-      setQixVelocity({ ...qixVelocity, y: -qixVelocity.y })
-      newQixY = qixPosition.y - qixVelocity.y
-    }
-    
-    setQixPosition({ x: newQixX, y: newQixY })
-    
-    // Move Sparx along the borders
-    const newSparxPositions = sparxPositions.map(sparx => {
-      let { x, y, direction } = sparx
-      const speed = 1 + Math.floor(level / 3) // Increase speed with level
-      
-      // Try to move in current direction
-      let newX = x
-      let newY = y
-      
-      switch (direction) {
-        case 0: // up
-          newY -= speed
-          break
-        case 1: // right
-          newX += speed
-          break
-        case 2: // down
-          newY += speed
-          break
-        case 3: // left
-          newX -= speed
-          break
-      }
-      
-      // Check if new position is valid (on border or claimed area)
-      if (newX >= 0 && newX < boardSize.width && newY >= 0 && newY < boardSize.height &&
-          ((isOnBorder(newX, newY) || (claimedArea[newY] && claimedArea[newY][newX])))) {
-        return { x: newX, y: newY, direction }
       } else {
-        // Change direction
-        const newDirection = (direction + 1) % 4
-        return { x, y, direction: newDirection }
+        // Player is drawing
+        const speed = keys.shift ? 2 : 1
+        let newX = playerPosition.x
+        let newY = playerPosition.y
+        
+        if (keys.up) {
+          newY -= speed
+        } else if (keys.down) {
+          newY += speed
+        } else if (keys.left) {
+          newX -= speed
+        } else if (keys.right) {
+          newX += speed
+        }
+        
+        // Check if new position is valid for drawing
+        if (newX >= 0 && newX < boardSize.width && newY >= 0 && newY < boardSize.height) {
+          // Check if hit border or claimed area
+          if (isOnBorder(newX, newY) || 
+              (claimedArea[newY] && claimedArea[newY][newX])) {
+            // Complete the path
+            setCurrentPath([...currentPath, { x: newX, y: newY }])
+            
+            // Fill the enclosed area
+            const newClaimedArea = [...claimedArea]
+            const filledArea = calculateArea(currentPath, newClaimedArea, boardSize)
+            setClaimedArea(filledArea.newArea)
+            
+            // Calculate percentage claimed
+            const totalClaimed = filledArea.newArea.flat().filter(Boolean).length
+            const totalArea = boardSize.width * boardSize.height
+            const percentage = Math.floor((totalClaimed / totalArea) * 100)
+            setPercentageClaimed(percentage)
+            
+            // Update game state
+            setPlayerDrawing(false)
+            setCurrentPath([])
+          } else {
+            // Continue drawing
+            if (newX !== playerPosition.x || newY !== playerPosition.y) {
+              setCurrentPath([...currentPath, { x: newX, y: newY }])
+            }
+          }
+          
+          setPlayerPosition({ x: newX, y: newY })
+        }
       }
-    })
-    
-    setSparxPositions(newSparxPositions)
-    
-    // Check collisions
-    // Player with Qix
-    if (checkCollision(playerPosition, qixPosition, 10)) {
-      handlePlayerDeath()
-    }
-    
-    // Player with Sparx
-    for (const sparx of sparxPositions) {
-      if (checkCollision(playerPosition, sparx, 5)) {
+      
+      // Move Qix
+      let newQixX = qixPosition.x + qixVelocity.x
+      let newQixY = qixPosition.y + qixVelocity.y
+      
+      // Bounce off walls and claimed areas
+      if (newQixX <= 0 || newQixX >= boardSize.width - 20 || 
+          (claimedArea[Math.floor(newQixY)] && claimedArea[Math.floor(newQixY)][Math.floor(newQixX)])) {
+        setQixVelocity({ ...qixVelocity, x: -qixVelocity.x })
+        newQixX = qixPosition.x - qixVelocity.x
+      }
+      
+      if (newQixY <= 0 || newQixY >= boardSize.height - 20 || 
+          (claimedArea[Math.floor(newQixY)] && claimedArea[Math.floor(newQixY)][Math.floor(newQixX)])) {
+        setQixVelocity({ ...qixVelocity, y: -qixVelocity.y })
+        newQixY = qixPosition.y - qixVelocity.y
+      }
+      
+      setQixPosition({ x: newQixX, y: newQixY })
+      
+      // Move Sparx along the borders
+      const newSparxPositions = sparxPositions.map(sparx => {
+        let { x, y, direction } = sparx
+        const speed = 1 + Math.floor(level / 3) // Increase speed with level
+        
+        // Try to move in current direction
+        let newX = x
+        let newY = y
+        
+        switch (direction) {
+          case 0: // up
+            newY -= speed
+            break
+          case 1: // right
+            newX += speed
+            break
+          case 2: // down
+            newY += speed
+            break
+          case 3: // left
+            newX -= speed
+            break
+        }
+        
+        // Check if new position is valid (on border or claimed area)
+        if (newX >= 0 && newX < boardSize.width && newY >= 0 && newY < boardSize.height &&
+            ((isOnBorder(newX, newY) || (claimedArea[newY] && claimedArea[newY][newX])))) {
+          return { x: newX, y: newY, direction }
+        } else {
+          // Change direction
+          const newDirection = (direction + 1) % 4
+          return { x, y, direction: newDirection }
+        }
+      })
+      
+      setSparxPositions(newSparxPositions)
+      
+      // Check collisions
+      // Player with Qix
+      if (checkCollision(playerPosition, qixPosition, 10)) {
         handlePlayerDeath()
-        break
       }
+      
+      // Player with Sparx
+      for (const sparx of sparxPositions) {
+        if (checkCollision(playerPosition, sparx, 5)) {
+          handlePlayerDeath()
+          break
+        }
+      }
+      
+      // Draw entities
+      // Draw player
+      ctx.fillStyle = '#00ffff'
+      ctx.fillRect(playerPosition.x - 2, playerPosition.y - 2, 5, 5)
+      
+      // Draw Qix
+      ctx.fillStyle = '#ff00ff'
+      drawQix(ctx, qixPosition.x, qixPosition.y, 20, time / 100)
+      
+      // Draw Sparx
+      ctx.fillStyle = '#ffff00'
+      for (const sparx of sparxPositions) {
+        ctx.beginPath()
+        ctx.arc(sparx.x, sparx.y, 3, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      
+      animationId = requestAnimationFrame(gameLoop)
     }
     
-    // Draw entities
-    // Draw player
-    ctx.fillStyle = '#00ffff'
-    ctx.fillRect(playerPosition.x - 2, playerPosition.y - 2, 5, 5)
+    animationId = requestAnimationFrame(gameLoop)
     
-    // Draw Qix
-    ctx.fillStyle = '#ff00ff'
-    drawQix(ctx, qixPosition.x, qixPosition.y, 20, performance.now() / 100)
-    
-    // Draw Sparx
-    ctx.fillStyle = '#ffff00'
-    for (const sparx of sparxPositions) {
-      ctx.beginPath()
-      ctx.arc(sparx.x, sparx.y, 3, 0, Math.PI * 2)
-      ctx.fill()
+    return () => {
+      cancelAnimationFrame(animationId)
     }
-  })
+  }, [isInitialized, keys, playerPosition, playerDrawing, currentPath, claimedArea, 
+      qixPosition, qixVelocity, sparxPositions, level, boardSize])
   
   // Helper functions
   function isOnBorder(x: number, y: number): boolean {
@@ -475,6 +502,14 @@ export function GameBoard({ level, onGameOver }: GameBoardProps) {
     setPlayerPosition({ x: Math.floor(boardSize.width / 2), y: boardSize.height - 1 })
     onGameOver()
   }
+  
+  // Update parent component with percentage claimed
+  useEffect(() => {
+    if (percentageClaimed > 0) {
+      // This would update the parent component
+      console.log(`Territory claimed: ${percentageClaimed}%`)
+    }
+  }, [percentageClaimed])
   
   return (
     <div className="relative border-4 border-cyan-500 rounded-lg overflow-hidden shadow-[0_0_20px_rgba(0,255,255,0.5)]">
